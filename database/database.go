@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/mattn/go-sqlite3" // ignore lint
@@ -56,6 +57,15 @@ type Config struct {
  **********************************************************************************************************************/
 
 func New(config Config) (db *Database, err error) {
+	// check folder exists
+	if _, err := os.Stat(config.WorkingDir); os.IsNotExist(err) {
+		log.WithField("workingDir", config.WorkingDir).Info("Creating working directory")
+
+		if err := os.Mkdir(config.WorkingDir, 0o755); err != nil {
+			return nil, err
+		}
+	}
+
 	dbFile := config.WorkingDir + "/" + dbName
 
 	log.WithField("dbFile", dbFile).Info("Opening database")
@@ -102,6 +112,35 @@ func (db *Database) Close() {
 	if db.sql != nil {
 		db.sql.Close()
 	}
+}
+
+func (db *Database) NewEvent(name, details string) error {
+	_, err := db.sql.Exec(`INSERT INTO events (name, details, created_at) VALUES (?, ?, ?)`,
+		name, details, time.Now().UTC())
+
+	return err
+}
+
+func (db *Database) UpdateEvent(name, details string) error {
+	result, err := db.sql.Exec(`UPDATE events SET details = ?, created_at = ? WHERE name = ?`,
+		details, time.Now().UTC(), name)
+
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		return fmt.Errorf("event %s not found", name)
+	}
+
+	return nil
+}
+
+func (db *Database) GetLatestEventDateTime(eventType string) (dateTime time.Time, err error) {
+	err = db.sql.QueryRow(`SELECT created_at FROM events WHERE name = ? ORDER BY id DESC LIMIT 1`, eventType).Scan(&dateTime)
+
+	return dateTime, err
 }
 
 func (db *Database) StoreUserInfo(message tgbotapi.Message) error {
@@ -174,7 +213,7 @@ func (db *Database) createEventTable() error {
 	_, err := db.sql.Exec(`CREATE TABLE IF NOT EXISTS events (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL,
-		description TEXT,
+		details TEXT,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	)`)
 

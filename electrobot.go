@@ -1,10 +1,14 @@
 package main
 
 import (
+	"os"
+	"os/signal"
+	"syscall"
+
 	"electrobot/database"
 	"electrobot/telegrambot"
-	"os"
 
+	"github.com/coreos/go-systemd/daemon"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -19,6 +23,7 @@ func init() {
 		FullTimestamp:    true,
 	})
 	log.SetOutput(os.Stdout)
+	log.SetLevel(log.DebugLevel)
 }
 
 /***********************************************************************************************************************
@@ -28,7 +33,7 @@ func init() {
 func main() {
 	log.Info("Hello, World!")
 
-	db, err := database.New(database.Config{WorkingDir: "/tmp"})
+	db, err := database.New(database.Config{WorkingDir: "/var/electrobot"})
 	if err != nil {
 		log.Errorf("Failed to start bot due to DB error: %s", err)
 
@@ -42,10 +47,23 @@ func main() {
 		os.Exit(2)
 	}
 
-	_, err = telegrambot.New(botToken, db)
+	bot, err := telegrambot.New(botToken, db)
 	if err != nil {
 		log.Errorf("Failed to start bot due to Telegram error: %s", err)
 
 		os.Exit(3)
 	}
+
+	// Notify systemd
+	if _, err = daemon.SdNotify(false, daemon.SdNotifyReady); err != nil {
+		log.Errorf("Can't notify systemd: %s", err)
+	}
+
+	// handle SIGTERM
+	c := make(chan os.Signal, 2) //nolint:gomnd
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	<-c
+
+	log.Info("Shutting down...")
+	bot.Close()
 }
