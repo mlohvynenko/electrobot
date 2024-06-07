@@ -148,7 +148,7 @@ func (bot *ElectroBot) handleHelpCommand() string {
 		"\nType /lastshutdown to get the last shutdown time"
 }
 
-func (bot *ElectroBot) handleTGMessage(updateMessage *botApi.Message) {
+func (bot *ElectroBot) handleTGMessageCommand(updateMessage *botApi.Message) {
 	log.WithFields(log.Fields{
 		"user":   updateMessage.From.UserName,
 		"userId": updateMessage.From.ID,
@@ -192,7 +192,9 @@ func (bot *ElectroBot) handler(ctx context.Context) {
 				continue
 			}
 
-			bot.handleTGMessage(update.Message)
+			if update.Message.IsCommand() {
+				bot.handleTGMessageCommand(update.Message)
+			}
 
 		case <-ctx.Done():
 			log.Info("Stopping bot")
