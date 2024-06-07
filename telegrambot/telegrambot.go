@@ -17,6 +17,7 @@ package telegrambot
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	botApi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -149,7 +150,12 @@ func (bot *ElectroBot) handleHelpCommand() string {
 }
 
 func (bot *ElectroBot) handleTGMessageCommand(updateMessage *botApi.Message) {
-	log.WithField("chatInfo", updateMessage.Chat).Info("Got a new message")
+	chatStr, err := json.Marshal(updateMessage.Chat)
+	if err != nil {
+		log.Errorf("Failed to marshal chat info: %s", err)
+	}
+
+	log.WithField("chatInfo", string(chatStr)).Info("Got a new message")
 
 	msg := botApi.NewMessage(updateMessage.Chat.ID, "")
 	msg.ReplyToMessageID = updateMessage.MessageID
