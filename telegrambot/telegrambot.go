@@ -149,10 +149,7 @@ func (bot *ElectroBot) handleHelpCommand() string {
 }
 
 func (bot *ElectroBot) handleTGMessageCommand(updateMessage *botApi.Message) {
-	log.WithFields(log.Fields{
-		"user":   updateMessage.From.UserName,
-		"userId": updateMessage.From.ID,
-	}).Info("Got a new message")
+	log.WithField("chatInfo", updateMessage.Chat).Info("Got a new message")
 
 	msg := botApi.NewMessage(updateMessage.Chat.ID, "")
 	msg.ReplyToMessageID = updateMessage.MessageID
@@ -161,9 +158,9 @@ func (bot *ElectroBot) handleTGMessageCommand(updateMessage *botApi.Message) {
 	case "lastshutdown":
 		msg.Text = bot.handleLastShutdownCommand()
 	case "start":
-		msg.Text = bot.handleStartCommand(updateMessage.From.ID, updateMessage)
+		msg.Text = bot.handleStartCommand(updateMessage.Chat.ID, updateMessage)
 	case "stop":
-		msg.Text = bot.handleStopCommand(updateMessage.From.ID)
+		msg.Text = bot.handleStopCommand(updateMessage.Chat.ID)
 	case "help":
 	default:
 		msg.Text = bot.handleHelpCommand()

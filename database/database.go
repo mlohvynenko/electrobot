@@ -145,7 +145,7 @@ func (db *Database) GetLatestEventDateTime(eventType string) (dateTime time.Time
 
 func (db *Database) StoreUserInfo(message tgbotapi.Message) error {
 	_, err := db.sql.Exec(`INSERT INTO tg_users (user_id, username, first_name, last_name) VALUES (?, ?, ?, ?)`,
-		message.From.ID, message.From.UserName, message.From.FirstName, message.From.LastName)
+		message.Chat.ID, message.Chat.UserName, message.Chat.FirstName, message.Chat.LastName)
 
 	return err
 }
